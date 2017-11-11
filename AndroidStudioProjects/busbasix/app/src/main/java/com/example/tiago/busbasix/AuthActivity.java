@@ -9,6 +9,7 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -39,6 +40,8 @@ public class AuthActivity extends AppCompatActivity {
             public void onSuccess(LoginResult loginResult) {
                 Log.d("onSuccess",  "onSuccess callback");
                 System.out.println( "Sucess on FACEBOOK login");
+                Toast.makeText(getApplicationContext(), "Login com Facebook realizado com Sucesso!", Toast.LENGTH_SHORT).show();
+
                 //GoTo MainPage
                //loginBtn.setVisibility(View.INVISIBLE);
                 Intent intent = new Intent(AuthActivity.this, MapsActivity.class);
