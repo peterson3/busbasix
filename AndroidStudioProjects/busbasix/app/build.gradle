@@ -31,4 +31,6 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.google.code.gson:gson:2.7'
     compile 'com.facebook.android:facebook-android-sdk:[4,5)'
+
+
 }

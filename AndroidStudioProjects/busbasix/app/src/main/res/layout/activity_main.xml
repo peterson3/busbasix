@@ -30,16 +30,19 @@
         android:layout_centerVertical="true"
         android:layout_toLeftOf="@+id/imageView"
         android:layout_toStartOf="@+id/imageView" />
+
     <ImageView
+        android:id="@+id/imageView"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:src="@mipmap/ic_launcher"
-        android:id="@+id/imageView"
-        android:layout_marginRight="74dp"
-        android:layout_marginEnd="74dp"
-        android:layout_centerVertical="true"
+        android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="74dp"
+        android:layout_marginRight="74dp"
+        android:background="@drawable/com_facebook_auth_dialog_cancel_background"
+        android:src="@mipmap/busbasix_icon"
+        app:srcCompat="@mipmap/busbasix_icon" />
 </RelativeLayout>
 
 </android.support.constraint.ConstraintLayout>

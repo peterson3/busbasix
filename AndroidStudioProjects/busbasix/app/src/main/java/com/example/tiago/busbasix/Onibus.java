@@ -69,4 +69,9 @@ public class Onibus {
         this.direcao = direcao;
     }
 
+    @Override
+    public String toString(){
+        return this.getLinha() + " | " + this.getOrdem() + " | " + this.getLinha() + " | " + this.getLatLong().latitude + " | " + this.getLatLong().longitude;
+    }
+
 }

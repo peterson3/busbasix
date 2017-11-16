@@ -18,5 +18,4 @@
     <string name="title_activity_auth">AuthActivity</string>
     <string name="facebook_app_id">1885662508361151</string>
     <string name="fb_login_protocol_scheme">fb1885662508361151</string>
-
 </resources>

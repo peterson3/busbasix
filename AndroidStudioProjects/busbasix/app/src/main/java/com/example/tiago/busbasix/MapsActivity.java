@@ -1,8 +1,12 @@
 package com.example.tiago.busbasix;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.app.Application;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
@@ -26,7 +30,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
@@ -49,12 +56,13 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private GoogleMap mMap;
     private Button inputDataBtn;
@@ -75,53 +83,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         enderecosText = (TextView) findViewById(R.id.enderecos_text);
-        Toast.makeText(getApplicationContext(), "Procurando Onibus próximos...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), "Inicializando...", Toast.LENGTH_SHORT).show();
 
-        /*inputDataBtn = (Button) findViewById(R.id.button2);
-        inputDataBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                //Código
-                //Random rand = new Random();
-
-                LatLng curPoint = new LatLng(lat, lng);
-
-                lat += 0.00001;
-                lng += 0.00001;
-
-                System.out.println("Selecting Another Point");
-                LatLng otherPoint = new LatLng(lat, lng);
-                mMap.addPolyline(new PolylineOptions().add(curPoint, otherPoint).width(20).color(Color.RED));
-                //mMap.addMarker(new MarkerOptions().position(otherPoint).title("other marker"));
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(otherPoint));
-                //mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
-            }
-        });
-        */
 
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
 
 
 
+        LatLng initialPos;
         if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            Log.d("GPS_PROVIDER", "IS ENABLED");
+            Location lastKnowLoc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            Log.d("GPS_PROVIDER", "GOT LAST KNOWN LOCATION");
 
-          /*  Location lastKnowLoc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if (lastKnowLoc != null){
+            if (lastKnowLoc != null) {
                 double new_lat = lastKnowLoc.getLatitude();
                 double new_long = lastKnowLoc.getLongitude();
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(new_lat, new_long)));
-                mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
-            }*/
+                initialPos = new LatLng(new_lat, new_long);
+
+            }
+
+
 
 
 
@@ -137,6 +124,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     LatLng curPoint = new LatLng(lat, lng);
                     double new_lat = location.getLatitude();
                     double new_long = location.getLongitude();
+                    //Location.distanceBetween();
                     LatLng latLng = new LatLng(new_lat, new_long);
                     mMap.addPolyline(new PolylineOptions().add(curPoint, latLng).width(10).color(Color.BLUE));
                     mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
@@ -144,6 +132,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     lat = new_lat;
                     lng = new_long;
+
+
 
                     Geocoder geocoder = new Geocoder(getApplicationContext());
                     try {
@@ -184,18 +174,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void onSearch(View view) {
-        EditText location_tf = (EditText) findViewById(R.id.destText);
-        String location = location_tf.getText().toString();
-        List<Address> addressList = null;
-        Log.d("Teste Json", "0");
 
         try {
-            new BusSearchTask().execute("http://10.0.2.2:8888/linhas/841").get();
+            new BusSearchTask().execute("https://xfpcyakati.localtunnel.me/linhas").get();
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
+
+        /*
+        EditText location_tf = (EditText) findViewById(R.id.destText);
+        String location = location_tf.getText().toString();
+        List<Address> addressList = null;
+        Log.d("Teste Json", "0");
 
         if (location != null || !location.equals("")) {
             Geocoder geocoder = new Geocoder(getApplicationContext());
@@ -211,12 +203,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.moveCamera(CameraUpdateFactory.newLatLng(lat_long_search));
             mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
         }
+        */
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        mMap.setOnMarkerClickListener(this);
+        boolean GPS_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+        Location location;
+        LatLng initialPos;
+        if(GPS_enabled){
+            Log.d("GPS_PROVIDER", "IS ENABLED");
+
+            location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            Log.d("GPS_PROVIDER", "GOT LAST KNOWN LOCATION");
+
+            if(location!=null){
+                double longitude = location.getLongitude();
+                double latitude = location.getLatitude();
+                initialPos = new LatLng(latitude, longitude);
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(initialPos));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
+            }
+        }
         // Add a marker in Federal Fluminense University Computing Institute and move the camera
         //LatLng ic_uff = new LatLng(lat, lng);
         //mMap.addMarker(new MarkerOptions().position(ic_uff).title("Marker in IC-UFF"));
@@ -235,17 +247,50 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setMyLocationEnabled(true);
     }
 
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        //Toast.makeText(this, "Teste", Toast.LENGTH_SHORT).show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        builder.setTitle("Linha " + marker.getTitle());
+        builder.setMessage("Você está abordo deste ônibus?");
+
+        builder.setPositiveButton("SIM", new DialogInterface.OnClickListener() {
+
+            public void onClick(DialogInterface dialog, int which) {
+                // Do nothing but close the dialog
+                //AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
+                //builder.setMessage("Você está abordo deste ônibus?");
+                //dialog
+                Toast.makeText(MapsActivity.this, "Ótimo! Colabore avaliando seu ônibus!", Toast.LENGTH_LONG).show();
+                dialog.dismiss();
+            }
+        });
+
+        builder.setNegativeButton("NÃO", new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                // Do nothing
+
+
+                dialog.dismiss();
+            }
+        });
+
+        AlertDialog alert = builder.create();
+        alert.show();
+        return false;
+    }
+
 
     public class BusSearchTask extends AsyncTask<String, String, List<Onibus>> {
         private final ProgressDialog dialog = new ProgressDialog(MapsActivity.this);
 
         @Override
         protected void onPreExecute() {
-            Log.d("Teste Json", "PRE - 01");
-
             super.onPreExecute();
-            Log.d("Teste Json", "PRE - 02");
-
             this.dialog.setMessage("Recebendo Dados de Ônibus...");
             this.dialog.show();
             Log.d("Teste Json", "PRE - 03");
@@ -290,14 +335,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 for (int i=0; i<data.length(); i++){
                     JSONArray interData = data.getJSONArray(i);
-                    Log.d("JSON DATA", interData.toString());
-                    Log.d("GET Json - DATAHORA", interData.getString(0));
-                    Log.d("GET Json - ORDEM", interData.getString(1));
-                    Log.d("GET Json - LINHA", interData.getString(2));
-                    Log.d("GET Json - LATITUDE", interData.getString(3));
-                    Log.d("GET Json - LONGITUDE", interData.getString(4));
-                    Log.d("GET Json - VELOCIDADE", interData.getString(5));
-                    Log.d("GET Json - DIRECAO", interData.getString(6));
+                //    Log.d("JSON DATA", interData.toString());
+                //    Log.d("GET Json - DATAHORA", interData.getString(0));
+                //    Log.d("GET Json - ORDEM", interData.getString(1));
+                //    Log.d("GET Json - LINHA", interData.getString(2));
+                //    Log.d("GET Json - LATITUDE", interData.getString(3));
+                //    Log.d("GET Json - LONGITUDE", interData.getString(4));
+                //    Log.d("GET Json - VELOCIDADE", interData.getString(5));
+                //    Log.d("GET Json - DIRECAO", interData.getString(6));
                     Onibus onibus = new Onibus();
                     SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy hh:mm:ss");
                     Date convertedDate = new Date();
@@ -350,9 +395,69 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     onibusLista.add(onibus);
                        }
                     */
+                    ArrayList<ArrayList<Onibus>> onibusPorLinha = new ArrayList<>();
+
+                    //Pega a primeira linha
+
+                do {
+                    Onibus first = onibusLista.get(0);
+                    String linha = first.getLinha();
+                    ArrayList<Onibus> primeiraLinha = new ArrayList<Onibus>();
+                    primeiraLinha.add(first);
+                    onibusPorLinha.add(primeiraLinha);
+                    //Pega todos os onibus dessa Linha
+                    for (int i = 1; i < onibusLista.size(); i++) {
+                        Onibus contender = onibusLista.get(i);
+                        if (contender.getLinha().equals(linha)) {
+                            primeiraLinha.add(contender);
+                        }
+                    }
+                    onibusLista.removeAll(primeiraLinha);
+                }while(onibusLista.size() != 0);
 
 
-               return onibusLista;
+                for (int i=0; i<onibusPorLinha.size(); i++){
+                    //Verificando a lista da linha
+                    String logPrint = onibusPorLinha.get(i).get(0).getOrdem();
+                    for (int j=1; j<onibusPorLinha.get(i).size(); j++){
+                        logPrint += ", " + onibusPorLinha.get(i).get(j).getOrdem();
+                    }
+
+                    String numeroLinha = "";
+                    if (onibusPorLinha.get(i).get(0).getLinha().isEmpty()){
+                        numeroLinha = "S/LINHA";
+                    }
+                    else{
+                        numeroLinha = onibusPorLinha.get(i).get(0).getLinha();
+                    }
+                    Log.d("LINHA " + numeroLinha, logPrint);
+                }
+
+                Log.d("Quantidade de Linhas", String.valueOf(onibusPorLinha.size()));
+
+                Location myLoc = new Location("meu local");
+                myLoc.setLatitude(-22.906847);
+                myLoc.setLongitude(-43.172896);
+
+                ArrayList<Onibus> onibusPerto = new ArrayList<>();
+                for (int i=0; i<onibusPorLinha.size(); i++){
+                    for (int j=0; j<onibusPorLinha.get(i).size(); j++){
+
+                        LatLng posOnibus = onibusPorLinha.get(i).get(j).getLatLong();
+                        Location busLoc = new Location("busLoc");
+                        busLoc.setLatitude(posOnibus.latitude);
+                        busLoc.setLongitude(posOnibus.longitude);
+                        double distance = myLoc.distanceTo(busLoc);
+                        //Log.i("DISTANCE", String.valueOf(distance));
+                        //Distância Menor que 300m
+                        if (distance < 300){
+                            Log.d("ONIBUS PERTO", "DISTANCIA " + String.valueOf(distance));
+                            onibusPerto.add(onibusPorLinha.get(i).get(j));
+                        }
+                    }
+                }
+
+               return onibusPerto;
 
             } catch (MalformedURLException e) {
                 e.printStackTrace();
@@ -381,10 +486,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             this.dialog.dismiss();
             //TODO: Adaptar Resultado para exibição
             if (result != null){
+                //Remove all Markers
+                mMap.clear();
                 //Toast.makeText(getApplicationContext(), "Linha: " + result.get(0).getLinha(), Toast.LENGTH_SHORT).show();
-                mMap.addMarker(new MarkerOptions().position(result.get(0).getLatLong()).title(result.get(0).getLinha() + " "+ result.get(0).getOrdem()));
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(result.get(0).getLatLong()));
-                mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
+                for (int i=0; i<result.size(); i++){
+                    mMap.addMarker(new MarkerOptions()
+                            .position(result.get(i).getLatLong())
+                            .title(result.get(i).getLinha() + "-"+ result.get(i).getOrdem())
+                            .icon(BitmapDescriptorFactory.fromResource(R.mipmap.bus_marker))
+                            .snippet("ônibus")
+
+                    );
+                }
+                Log.d("QtdOnibusNaTela", String.valueOf(result.size()));
+
+                 Location myLoc = new Location("meu local");
+                    myLoc.setLatitude(-22.906847);
+                    myLoc.setLongitude(-43.172896);
+
+                MarkerOptions markerOption = new MarkerOptions()
+                        .position(new LatLng(myLoc.getLatitude(), myLoc.getLongitude()))
+                        .title("MyLoc")
+                        .snippet("This is MyLoc");
+                 mMap.addMarker(markerOption);
+
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(myLoc.getLatitude(), myLoc.getLongitude())));
+                    mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
+
+
             }
             /*
             if (result != null) {
@@ -404,7 +533,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
             */
         }
+
+        double distance_between(Location l1, Location l2)
+        {
+            double lat1=l1.getLatitude();
+            double lon1=l1.getLongitude();
+            double lat2=l2.getLatitude();
+            double lon2=l2.getLongitude();
+            double R = 6371; // km
+            double dLat = (lat2-lat1)*Math.PI/180;
+            double dLon = (lon2-lon1)*Math.PI/180;
+            lat1 = lat1*Math.PI/180;
+            lat2 = lat2*Math.PI/180;
+
+            double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            double d = R * c * 1000;
+
+            return d;
+        }
     }
+
+
 
 }
 
