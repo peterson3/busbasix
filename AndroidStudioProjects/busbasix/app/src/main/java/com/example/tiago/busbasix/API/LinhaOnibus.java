@@ -7,7 +7,7 @@ package com.example.tiago.busbasix.API;
 public class LinhaOnibus {
     private String identificador;
     private Rota rota;
-
+    private Linha linha;
 
     public String getIdentificador() {
         return identificador;

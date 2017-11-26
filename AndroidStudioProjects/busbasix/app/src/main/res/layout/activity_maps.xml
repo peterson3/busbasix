@@ -5,59 +5,88 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.example.tiago.busbasix.MapsActivity">
-    <RelativeLayout
-        android:layout_height="0dp"
-        android:layout_width="0dp"
-        android:background="#5AA67B"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintVertical_bias="1.0">
 
-        <fragment xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:map="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
-        android:id="@+id/map"
-        android:name="com.google.android.gms.maps.SupportMapFragment"
-        android:layout_marginTop="50dp"
-        android:layout_marginBottom="150dp"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:context="com.example.tiago.busbasix.MapsActivity" />
+        <RelativeLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="#5AA67B"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.0">
 
-        <EditText
-            android:id="@+id/enderecos_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:layout_marginBottom="50dp"
-            android:ems="10"
-            android:enabled="false"
-            android:inputType="textMultiLine" />
+            <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:map="http://schemas.android.com/apk/res-auto"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:id="@+id/map"
+                android:name="com.google.android.gms.maps.SupportMapFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginBottom="120dp"
+                android:layout_marginTop="80dp"
+                tools:context="com.example.tiago.busbasix.MapsActivity" />
 
-        <EditText
-            android:id="@+id/destText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="textPersonName"
-            android:text="Name" />
+            <EditText
+                android:id="@+id/enderecos_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:layout_marginBottom="50dp"
+                android:ems="10"
+                android:enabled="false"
+                android:inputType="textMultiLine" />
 
-        <Button
-            android:id="@+id/button2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="true"
-            android:onClick="onSearch"
-            android:text="Button" />
+            <EditText
+                android:id="@+id/to_location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:ems="10"
+                android:maxLines="1"
+                android:inputType="text"
+                android:imeOptions="actionDone"
+                android:hint="To"/>
 
-    </RelativeLayout>
+            <EditText
+                android:hint="From"
+                android:id="@+id/from_location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:inputType="text"
+                android:imeOptions="actionDone"
+                android:ems="10"
+                android:layout_alignParentTop="true" />
+
+            <Button
+                android:id="@+id/search_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
+                android:onClick="onSearch"
+                android:text="Go!"
+                android:layout_alignBottom="@+id/to_location"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentEnd="true"
+                android:layout_marginBottom="16dp" />
+
+<android.support.design.widget.CheckableImageButton
+    android:id="@+id/curLoc_btn"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:src="@mipmap/cur_location"
+    android:background="@android:color/transparent"
+    android:layout_alignParentTop="true"
+    android:layout_toRightOf="@+id/to_location"
+    android:layout_alignBottom="@+id/from_location"
+    android:onClick="onClickFromMyCurrentLocation"/>
+
+        </RelativeLayout>
 
     </android.support.constraint.ConstraintLayout>
 
