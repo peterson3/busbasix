@@ -1,4 +1,4 @@
-package com.example.tiago.busbasix.API;
+package com.example.tiago.busbasix.API.busBasix;
 
 import android.media.MediaRecorder;
 import android.support.v4.app.ActivityCompat;

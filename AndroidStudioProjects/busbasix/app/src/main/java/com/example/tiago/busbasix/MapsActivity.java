@@ -7,6 +7,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Region;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -25,7 +27,10 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.tiago.busbasix.API.SoundMeter;
+import com.example.tiago.busbasix.API.busBasix.Onibus;
+import com.example.tiago.busbasix.API.busBasix.SoundMeter;
+import com.example.tiago.busbasix.API.googleDirection.Direction;
+import com.example.tiago.busbasix.API.googleDirection.Polyline;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -35,6 +40,7 @@ import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -224,13 +230,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void onSearch(View view) {
 
-        //Cake Recipe
         //1- Check if From Location and To Location are not empty
         EditText from_editText = (EditText) findViewById(R.id.from_location);
-        //from_editText.clearFocus();
         String from_text = from_editText.getText().toString();
         EditText to_editText = (EditText) findViewById(R.id.to_location);
-        //to_editText.clearFocus();
+        String to_Text = to_editText.getText().toString();
 
 
         // Check if no view has focus:
@@ -241,7 +245,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
 
-        String to_Text = from_editText.getText().toString();
         if (from_text.isEmpty() || to_Text.isEmpty()){
             Toast.makeText(this, "Falta informações de Localização", Toast.LENGTH_SHORT).show();
         }
@@ -260,6 +263,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //4- Turn available the Travel Info to User
             //TODO
 
+
+
         List<Address> addressList = null;
         if (to_editText != null || !to_editText.equals("")) {
             Geocoder geocoder = new Geocoder(getApplicationContext());
@@ -270,14 +275,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             this.destination = addressList.get(0);
+
             try {
+                String requestString = "https://maps.googleapis.com/maps/api/directions/json?" +
+                        "alternatives=true" +
+                        "&origin=" + origin.getLatitude() +"," + origin.getLongitude() +
+                        "&destination="  + destination.getLatitude() +"," + destination.getLongitude() +
+                        "&mode=transit" +
+                        "&language=pt-BR" +
+                        "&key=AIzaSyCgL70drGeVpDEz40qIiYoqdwP6gKmnXl8";
+                Log.d("Request String" , requestString);
                 new DirectionSearchTask()
-                        .execute("https://maps.googleapis.com/maps/api/directions/json?" +
-                                "alternatives=true" +
-                                "&origin=" + origin.getLatitude() +"," + origin.getLongitude() +
-                                "&destination="  + destination.getLatitude() +"," + destination.getLongitude() +
-                                "&mode=transit" +
-                                "&key=AIzaSyCgL70drGeVpDEz40qIiYoqdwP6gKmnXl8").get();
+                        .execute(requestString).get();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (ExecutionException e) {
@@ -498,6 +507,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return false;
     }
 
+    private void showGPSDisabledAlertToUser(){
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        alertDialogBuilder.setMessage("GPS is disabled in your device. Would you like to enable it?")
+                .setCancelable(false)
+                .setPositiveButton("Goto Settings Page To Enable GPS",
+                        new DialogInterface.OnClickListener(){
+                            public void onClick(DialogInterface dialog, int id){
+                                Intent callGPSSettingIntent = new Intent(
+                                        android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                                startActivity(callGPSSettingIntent);
+                            }
+                        });
+        alertDialogBuilder.setNegativeButton("Cancel",
+                new DialogInterface.OnClickListener(){
+                    public void onClick(DialogInterface dialog, int id){
+                        dialog.cancel();
+                    }
+                });
+        AlertDialog alert = alertDialogBuilder.create();
+        alert.show();
+    }
+
+    //Async Tasks Region
+
     public class BusSearchTask extends AsyncTask<String, String, List<Onibus>> {
         private final ProgressDialog dialog = new ProgressDialog(MapsActivity.this);
 
@@ -506,7 +539,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             super.onPreExecute();
             ProgressDialog dialog;
             dialog = new ProgressDialog(getApplicationContext());
-           // dialog.setMessage("Recebendo Dados de Ônibus...");
+            // dialog.setMessage("Recebendo Dados de Ônibus...");
             //dialog.show();
             //Log.d("Teste Json", "PRE - 03");
 
@@ -528,14 +561,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d("INTERNET CONNECTION", "CONNECTED");
 
                 InputStream stream = null;
-                try{
+                try {
                     stream = connection.getInputStream();
-                }
-                catch (FileNotFoundException ex){
-                    runOnUiThread(new Runnable(){
+                } catch (FileNotFoundException ex) {
+                    runOnUiThread(new Runnable() {
 
                         @Override
-                        public void run(){
+                        public void run() {
                             Toast.makeText(MapsActivity.this, "Não foi possível recuperar as linhas", Toast.LENGTH_SHORT).show();
                         }
                     });
@@ -544,113 +576,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 reader = new BufferedReader(new InputStreamReader(stream));
                 StringBuffer buffer = new StringBuffer();
-
                 Log.d("Teste Json", "3");
-
                 String line = "";
                 while ((line = reader.readLine()) != null) {
                     buffer.append(line);
                 }
 
                 String finalJson = buffer.toString();
-
-                //JSONObject parentObject = new JSONObject(finalJson);
-                Log.d("Final JSON", finalJson);
-                //JSONArray data  = parentObject.getJSONArray("");
                 JSONArray data = new JSONArray(finalJson);
-                Log.d("JSON DATA", data.toString());
-                Log.d("QtdInfo no JSON", String.valueOf(data.length()));
-
                 List<Onibus> onibusLista = new ArrayList<>();
 
-                for (int i=0; i<data.length(); i++){
-                    //JSONArray interData = data.getJSONArray(i);
+                for (int i = 0; i < data.length(); i++) {
                     JSONObject interData = data.getJSONObject(i);
-                //    Log.d("JSON DATA", interData.toString());
-                //    Log.d("GET Json - DATAHORA", interData.getString(0));
-                //    Log.d("GET Json - ORDEM", interData.getString(1));
-                //    Log.d("GET Json - LINHA", interData.getString(2));
-                //    Log.d("GET Json - LATITUDE", interData.getString(3));
-                //    Log.d("GET Json - LONGITUDE", interData.getString(4));
-                //    Log.d("GET Json - VELOCIDADE", interData.getString(5));
-                //    Log.d("GET Json - DIRECAO", interData.getString(6));
-                    Onibus onibus = new Onibus();
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy hh:mm:ss");
-
-
-                    Date convertedDate = new Date();
-
-                    /*try {
-                        convertedDate= dateFormat.parse(interData.getString(0));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                    onibus.setDataHora(convertedDate);
-                    onibus.setOrdem(interData.getString(1));
-                    onibus.setLinha(interData.getString(2));
-                    onibus.setLatLong(new LatLng(Double.parseDouble(interData.getString(3)), Double.parseDouble(interData.getString(4))));
-                    onibus.setVelocidade(Float.parseFloat(interData.getString(5)));
-                    onibus.setDirecao(Integer.parseInt(interData.getString(6)));
-                    */
-
-                    try {
-                        convertedDate= dateFormat.parse(interData.getString("DataHora"));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                    onibus.setDataHora(convertedDate);
-                    onibus.setOrdem(interData.getString("Ordem"));
-                    onibus.setLinha(interData.getString("Linha"));
-                    onibus.setLatLong(new LatLng(Double.parseDouble(interData.getString("Latitude")), Double.parseDouble(interData.getString("Longitude"))));
-                    onibus.setVelocidade(Float.parseFloat(interData.getString("Velocidade")));
-                    onibus.setDirecao(Integer.parseInt(interData.getString("Direcao")));
-
-
-
+                    Onibus onibus = new Onibus(interData);
                     Log.d("Onibus Instanciado", onibus.toString());
-
-
                     onibusLista.add(onibus);
                 }
-
-
-
-
-
-                    /*
-                //JSONObject parentObject = new JSONObject(finalJson);
-                //JSONArray parentArray = parentObject.getJSONArray("data");
-
-                List<Onibus> onibusLista = new ArrayList<>();
-
-                //Gson gson = new Gson();
-                //for (int i = 0; i < parentArray.length(); i++) {
-                    //JSONObject finalObject = parentArray.getJSONObject(i);
-                    /**
-                     * below single line of code from Gson saves you from writing the json parsing yourself
-                     * which is commented below
-                     */
-
-                    //Onibus onibus = new Onibus();
-                    /*
-                    onibus.setLinha(finalObject.getString("DATA[0][2]"));
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss");
-                    Date convertedDate = new Date();
-                    try {
-                       convertedDate= dateFormat.parse(finalObject.getString("DATA[0][0]"));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                    onibus.setDataHora(convertedDate);
-                    onibus.setLatLong(new LatLng(finalObject.getDouble("DATA[0][3]"), finalObject.getDouble("DATA[0][4]")));
-                    onibus.setOrdem(finalObject.getString("DATA[0][1]"));
-                    onibusLista.add(onibus);
-                       }
-                    */
-                    ArrayList<ArrayList<Onibus>> onibusPorLinha = new ArrayList<>();
-
-                    //Pega a primeira linha
-
+                ArrayList<ArrayList<Onibus>> onibusPorLinha = new ArrayList<>();
+                //Pega a primeira linha
                 do {
                     Onibus first = onibusLista.get(0);
                     String linha = first.getLinha();
@@ -665,21 +608,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                     }
                     onibusLista.removeAll(primeiraLinha);
-                }while(onibusLista.size() != 0);
+                } while (onibusLista.size() != 0);
 
 
-                for (int i=0; i<onibusPorLinha.size(); i++){
+                for (int i = 0; i < onibusPorLinha.size(); i++) {
                     //Verificando a lista da linha
                     String logPrint = onibusPorLinha.get(i).get(0).getOrdem();
-                    for (int j=1; j<onibusPorLinha.get(i).size(); j++){
+                    for (int j = 1; j < onibusPorLinha.get(i).size(); j++) {
                         logPrint += ", " + onibusPorLinha.get(i).get(j).getOrdem();
                     }
 
                     String numeroLinha = "";
-                    if (onibusPorLinha.get(i).get(0).getLinha().isEmpty()){
+                    if (onibusPorLinha.get(i).get(0).getLinha().isEmpty()) {
                         numeroLinha = "S/LINHA";
-                    }
-                    else{
+                    } else {
                         numeroLinha = onibusPorLinha.get(i).get(0).getLinha();
                     }
                     Log.d("LINHA " + numeroLinha, logPrint);
@@ -692,8 +634,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 myLoc.setLongitude(-43.172896);
 
                 ArrayList<Onibus> onibusPerto = new ArrayList<>();
-                for (int i=0; i<onibusPorLinha.size(); i++){
-                    for (int j=0; j<onibusPorLinha.get(i).size(); j++){
+                for (int i = 0; i < onibusPorLinha.size(); i++) {
+                    for (int j = 0; j < onibusPorLinha.get(i).size(); j++) {
 
                         LatLng posOnibus = onibusPorLinha.get(i).get(j).getLatLong();
                         Location busLoc = new Location("busLoc");
@@ -702,20 +644,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         double distance = myLoc.distanceTo(busLoc);
                         //Log.i("DISTANCE", String.valueOf(distance));
                         //Distância Menor que 300m
-                        if (distance < 300){
+                        if (distance < 300) {
                             Log.d("ONIBUS PERTO", "DISTANCIA " + String.valueOf(distance));
                             onibusPerto.add(onibusPorLinha.get(i).get(j));
                         }
                     }
                 }
 
-               return onibusPerto;
+                return onibusPerto;
 
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (JSONException e) {
+                e.printStackTrace();
+            } catch (ParseException e) {
                 e.printStackTrace();
             } finally {
                 if (connection != null) {
@@ -737,11 +681,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             super.onPostExecute(result);
             dialog.dismiss();
             //TODO: Adaptar Resultado para exibição
-            if (result != null){
+            if (result != null) {
                 //Remove all Markers
                 mMap.clear();
                 //Toast.makeText(getApplicationContext(), "Linha: " + result.get(0).getLinha(), Toast.LENGTH_SHORT).show();
-                for (int i=0; i<result.size(); i++){
+                for (int i = 0; i < result.size(); i++) {
                     mMap.addMarker(new MarkerOptions()
                             .position(result.get(i).getLatLong())
                             .title("Linha " + result.get(i).getLinha())
@@ -750,69 +694,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     );
                 }
                 Log.d("QtdOnibusNaTela", String.valueOf(result.size()));
-
-
             }
-            /*
-            if (result != null) {
-                MovieAdapter adapter = new MovieAdapter(getApplicationContext(), R.layout.row, result);
-                lvMovies.setAdapter(adapter);
-                lvMovies.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
-                    @Override
-                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        MovieModel movieModel = result.get(position); // getting the model
-                        Intent intent = new Intent(MainActivity.this, DetailActivity.class);
-                        intent.putExtra("movieModel", new Gson().toJson(movieModel)); // converting model json into string type and sending it via intent
-                        startActivity(intent);
-                    }
-                });
-            } else {
-                Toast.makeText(getApplicationContext(), "Not able to fetch data from server, please check url.", Toast.LENGTH_SHORT).show();
-            }
-            */
         }
-
-        double distance_between(Location l1, Location l2)
-        {
-            double lat1=l1.getLatitude();
-            double lon1=l1.getLongitude();
-            double lat2=l2.getLatitude();
-            double lon2=l2.getLongitude();
-            double R = 6371; // km
-            double dLat = (lat2-lat1)*Math.PI/180;
-            double dLon = (lon2-lon1)*Math.PI/180;
-            lat1 = lat1*Math.PI/180;
-            lat2 = lat2*Math.PI/180;
-
-            double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                    Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
-            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            double d = R * c * 1000;
-
-            return d;
-        }
-    }
-
-    private void showGPSDisabledAlertToUser(){
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-        alertDialogBuilder.setMessage("GPS is disabled in your device. Would you like to enable it?")
-                .setCancelable(false)
-                .setPositiveButton("Goto Settings Page To Enable GPS",
-                        new DialogInterface.OnClickListener(){
-                            public void onClick(DialogInterface dialog, int id){
-                                Intent callGPSSettingIntent = new Intent(
-                                        android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                                startActivity(callGPSSettingIntent);
-                            }
-                        });
-        alertDialogBuilder.setNegativeButton("Cancel",
-                new DialogInterface.OnClickListener(){
-                    public void onClick(DialogInterface dialog, int id){
-                        dialog.cancel();
-                    }
-                });
-        AlertDialog alert = alertDialogBuilder.create();
-        alert.show();
     }
 
     public class ListenMicSensorTask extends AsyncTask<String, Void, Object>{
@@ -871,7 +754,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    public class DirectionSearchTask extends AsyncTask<String, String, JSONObject> {
+    public class DirectionSearchTask extends AsyncTask<String, String, Direction> {
         private final ProgressDialog dialog = new ProgressDialog(MapsActivity.this);
 
         @Override
@@ -886,8 +769,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         @Override
-        protected JSONObject doInBackground(String... params) {
+        protected Direction doInBackground(String... params) {
             JSONObject response = null;
+            Direction direction = null;
             //HTTP request google
             HttpURLConnection connection = null;
             BufferedReader reader = null;
@@ -921,28 +805,60 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
 
                 String finalJsonString = buffer.toString();
-
-                //JSONObject parentObject = new JSONObject(finalJson);
-                Log.d("Final JSON", finalJsonString);
+                //Garanto que a resposta será apenas um Objeto "Direction"
                 response = new JSONObject(finalJsonString);
-                Log.d("JSON DATA", response.toString());
+                direction = new Direction(response);
+
+
 
             } catch (IOException e) {
                 e.printStackTrace();
-                return response;
+                return direction;
             } catch (JSONException e) {
                 e.printStackTrace();
-                return response;
+                return direction;
             }
 
-            return response;
+            return direction
+                    ;
         }
 
             @Override
-        protected void onPostExecute(final JSONObject result) {
-            super.onPostExecute(result);
-            dialog.dismiss();
-            //TODO: Adaptar Resultado para exibição
+        protected void onPostExecute(final Direction result) {
+                super.onPostExecute(result);
+                Log.d("REQUEST STATUS",result.status);
+                for (int i=0; i<result.routes.size(); i++){
+                    Log.d("DIRECTION " + String.valueOf(i) +" SUMMARY", result.routes.get(i).summary);
+                    Log.d("DIRECTION " + String.valueOf(i) +" FARE", result.routes.get(i).fare.text);
+                    for (int j=0; j<result.routes.get(i).warnings.size(); j++){
+                        //Log.d("DIRECTION " + String.valueOf(i) +" WARNING", result.routes.get(i).warnings.get(j));
+                    }
+                    for (int j=0; j<result.routes.get(i).legs.size(); j++){
+                       // Log.d("DIRECTION " + String.valueOf(i) +" LEG", result.routes.get(i).legs.get(j));
+                        for (int k=0; k<result.routes.get(i).legs.get(j).steps.size(); k++){
+
+                            if ( result.routes.get(i).legs.get(j).steps.get(k).transit_details!=null){
+                                 Log.d("DIRECTION " + String.valueOf(i) +" LINE",
+                                         result.routes.get(i).legs.get(j).steps.get(k).transit_details.line.short_name + "-" + result.routes.get(i).legs.get(j).steps.get(k).transit_details.line.name);
+                            }
+
+                        }
+                    }
+                }
+
+                List<LatLng> list = decodePoly(result.routes.get(0).overview_polyline.points);
+
+                PolylineOptions options = new PolylineOptions().width(15).color(Color.BLUE).geodesic(true);
+                for (int z = 0; z < list.size(); z++) {
+                    LatLng point = list.get(z);
+                    options.add(point);
+                }
+                com.google.android.gms.maps.model.Polyline line = mMap.addPolyline(options);
+
+
+
+                dialog.dismiss();
+
         }
 
         double distance_between(Location l1, Location l2)
@@ -966,5 +882,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    //Async Tasks Region End
+
+    private List<LatLng> decodePoly(String encoded) {
+
+        List<LatLng> poly = new ArrayList<LatLng>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+
+        return poly;
+    }
 }
 
