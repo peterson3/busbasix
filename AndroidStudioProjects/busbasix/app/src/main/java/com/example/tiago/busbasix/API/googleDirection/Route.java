@@ -1,9 +1,12 @@
 package com.example.tiago.busbasix.API.googleDirection;
 
+import com.google.gson.Gson;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,6 +51,18 @@ public class Route {
 
         this.overview_polyline = new OverviewPolyline(jsonObject.getJSONObject("overview_polyline"));
 
+    }
+
+    public ArrayList<String> getNomeOnibus (){
+        ArrayList<String> result = new ArrayList<>();
+        for (int i=0; i<this.legs.size(); i++){
+            for (int j=0; j<this.legs.get(i).steps.size(); j++){
+                if (this.legs.get(i).steps.get(j).transit_details != null){
+                    result.add(this.legs.get(i).steps.get(j).transit_details.line.short_name);
+                }
+            }
+        }
+        return result;
     }
 
 

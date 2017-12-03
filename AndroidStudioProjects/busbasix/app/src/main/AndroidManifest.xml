@@ -72,7 +72,16 @@
             android:theme="@style/AppTheme" />
         <activity
             android:name=".RatingActivity"
-            android:label="@string/title_activity_rating"></activity>
+            android:label="@string/title_activity_rating"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".API.RoutesOptionActivity" />
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/title_activity_settings" />
+        <activity
+            android:name=".API.RatingActivity"
+            android:label="@string/title_activity_rating"
+            android:theme="@style/AppTheme" />
     </application>
 
 </manifest>

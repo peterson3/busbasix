@@ -37,9 +37,16 @@ dependencies {
     compile 'com.google.firebase:firebase-database:11.0.4'
     compile 'com.android.support:support-v4:25.3.1'
     compile 'com.android.support:support-vector-drawable:25.3.1'
-    testCompile 'junit:junit:4.12'
     compile 'com.github.arimorty:floatingsearchview:2.1.1'
+    testCompile 'junit:junit:4.12'
 }
+
+
+
+
+
+
+
 
 
 

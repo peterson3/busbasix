@@ -17,6 +17,21 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.0">
 
+            <!--<com.arlib.floatingsearchview.FloatingSearchView-->
+                <!--android:id="@+id/floating_search_view"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="match_parent"-->
+                <!--app:floatingSearch_searchHint="Pra onde deseja ir?"-->
+                <!--app:floatingSearch_suggestionsListAnimDuration="250"-->
+                <!--app:floatingSearch_showSearchKey="true"-->
+                <!--app:floatingSearch_leftActionMode="showSearch"-->
+                <!--app:floatingSearch_showMoveSuggestionUp="true"-->
+                <!--app:floatingSearch_showMenuAction="true"-->
+                <!--app:floatingSearch_showOverFlowMenu="true"-->
+                <!--app:floatingSearch_showVoiceInput="true"-->
+                <!--app:floatingSearch_voiceRecHint="@string/com_facebook_loading"-->
+                <!--app:floatingSearch_close_search_on_keyboard_dismiss="true"/>-->
+
             <fragment xmlns:android="http://schemas.android.com/apk/res/android"
                 xmlns:map="http://schemas.android.com/apk/res-auto"
                 xmlns:tools="http://schemas.android.com/tools"
@@ -85,6 +100,30 @@
     android:layout_toRightOf="@+id/to_location"
     android:layout_alignBottom="@+id/from_location"
     android:onClick="onClickFromMyCurrentLocation"/>
+
+            <TextView
+                android:id="@+id/current_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TextView"
+                android:textAlignment="center"
+                android:textAllCaps="true"
+                android:textSize="35dp"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentEnd="true"
+                android:layout_alignTop="@+id/enderecos_text" />
+
+            <Button
+                android:id="@+id/rate_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Avaliar"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true"
+                android:visibility="invisible"/>
 
         </RelativeLayout>
 

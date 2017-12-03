@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Region;
+import android.graphics.drawable.Icon;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -27,10 +28,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.tiago.busbasix.API.RoutesOptionActivity;
 import com.example.tiago.busbasix.API.busBasix.Onibus;
 import com.example.tiago.busbasix.API.busBasix.SoundMeter;
 import com.example.tiago.busbasix.API.googleDirection.Direction;
 import com.example.tiago.busbasix.API.googleDirection.Polyline;
+import com.example.tiago.busbasix.API.googleDirection.Route;
+import com.example.tiago.busbasix.API.rioBus.Bus;
+import com.example.tiago.busbasix.API.rioBus.Line;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -43,6 +48,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -53,6 +60,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -82,9 +91,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Circle me = null;
     private Address origin = null;
     private Address destination = null;
+    private static final int SHOW_ROUTES_RESULT_CODE = 0;
+    private int retorno_opcao_rota;
+    private Direction direction = null;
+    TextView current_status;
+    EditText from_editText;
+    EditText to_editText;
+    Button rate_btn;
+
+    private List<Marker> bus_markers;
+    private Bus bus_i_am_in;
+    public List<Bus> buses_in_screen;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -93,7 +115,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         enderecosText = (TextView) findViewById(R.id.enderecos_text);
         Toast.makeText(getApplicationContext(), "Inicializando...", Toast.LENGTH_SHORT).show();
 
+        TextView current_status = (TextView) findViewById(R.id.current_status);
+        EditText from_editText = (EditText) findViewById(R.id.from_location);
+        EditText to_editText = (EditText) findViewById(R.id.to_location);
 
+        current_status.setText("DESCONHECIDO");
         if (ContextCompat.checkSelfPermission(getApplicationContext(),
                         Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                     Log.d("AUDIO PERMISSION", "NOT GRANTED");
@@ -231,9 +257,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onSearch(View view) {
 
         //1- Check if From Location and To Location are not empty
-        EditText from_editText = (EditText) findViewById(R.id.from_location);
+        current_status = (TextView) findViewById(R.id.current_status);
+        from_editText = (EditText) findViewById(R.id.from_location);
+        to_editText = (EditText) findViewById(R.id.to_location);
+
         String from_text = from_editText.getText().toString();
-        EditText to_editText = (EditText) findViewById(R.id.to_location);
         String to_Text = to_editText.getText().toString();
 
 
@@ -264,7 +292,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //TODO
 
 
-
         List<Address> addressList = null;
         if (to_editText != null || !to_editText.equals("")) {
             Geocoder geocoder = new Geocoder(getApplicationContext());
@@ -285,18 +312,73 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         "&language=pt-BR" +
                         "&key=AIzaSyCgL70drGeVpDEz40qIiYoqdwP6gKmnXl8";
                 Log.d("Request String" , requestString);
-                new DirectionSearchTask()
-                        .execute(requestString).get();
+                direction = new DirectionSearchTask().execute(requestString).get();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (ExecutionException e) {
                 e.printStackTrace();
             }
-            //  mMap.addMarker(new MarkerOptions().position(lat_long_search).title("Marker on search"));
-          //  mMap.moveCamera(CameraUpdateFactory.newLatLng(lat_long_search));
-          //  mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
+
+            if (direction != null){
+                if (direction.routes.size()>0){
+                    //Buscar Informações Lista das Linhas p/ cada Rota
+
+                    //Exibir Lista de Rotas para o usuário (nova atividade)
+                    Intent showRoutesOptionsToUser = new Intent(MapsActivity.this, RoutesOptionActivity.class);
+                   // Bundle extras = new Bundle();
+                    Gson gson = new Gson();
+                    String teste = gson.toJson(direction.routes);
+                   // extras.putSerializable("routesList", (Serializable)geson );
+                    //showRoutesOptionsToUser.putExtras(extras);
+                    showRoutesOptionsToUser.putExtra("json", teste);
+                    startActivityForResult(showRoutesOptionsToUser, SHOW_ROUTES_RESULT_CODE);
+                }
+            }
         }
 
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // check that it is the SecondActivity with an OK result
+        if (requestCode == SHOW_ROUTES_RESULT_CODE) {
+            if (resultCode == RESULT_OK) {
+
+                // get String data from Intent
+                int returnValue = data.getIntExtra("listposition", -1);
+
+                if (returnValue == -1){
+                    Toast.makeText(this, "Erro. Cod: 2000", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    Toast.makeText(this, "Opção de Rota Escolhida: " + String.valueOf(returnValue+1), Toast.LENGTH_SHORT).show();
+                    Log.d("Escolha", "Usuario escolheu a opção de rota " + String.valueOf(returnValue));
+                    retorno_opcao_rota = returnValue;
+                    //Com base nesse retorno, procurar informações dos onibus e jogar na tela.
+
+                    String requestString=  "http://rest.riob.us/v3/search/";
+                    ArrayList<String> nomeOnibus = direction.routes.get(retorno_opcao_rota).getNomeOnibus();
+                    for (int i=0; i<nomeOnibus.size(); i++){
+                        String nomeOnibus_tratado  = nomeOnibus.get(i);
+                        nomeOnibus_tratado = nomeOnibus_tratado.replaceAll("\\D+","");
+                        requestString += nomeOnibus_tratado;
+                        if (i!=nomeOnibus.size()-1) // Enquanto não for a Ultima Iteração adicionar a virgula
+                        {
+                            requestString += ",";
+                        }
+                    }
+
+                    try {
+                        buses_in_screen = new BusRioInfoSearchTask().execute(requestString).get();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
     }
 
     public void onClickFromMyCurrentLocation(View view) {
@@ -444,7 +526,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    public boolean onMarkerClick(Marker marker) {
+    public boolean onMarkerClick(final Marker marker) {
         //Toast.makeText(this, "Teste", Toast.LENGTH_SHORT).show();
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -464,6 +546,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //Pedir Permissão para utilizar o MICROFONE
                 //Verificar Volume do Som Ambiente
                 //Com base no "Emperismo", ou "Heurísticas" definir um valor aceitável
+                current_status.setText("ABORDO DO ÔNIBUS");
+
+                int index = bus_markers.indexOf(marker);
+                bus_i_am_in = buses_in_screen.get(index);
+                TextView current_status = (TextView) findViewById(R.id.current_status);
+                current_status.setText(bus_i_am_in.line + "-" + bus_i_am_in.order);
+                View btn = (Button)findViewById(R.id.rate_button);
+                btn.setVisibility(View.VISIBLE);
+                btn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        //Iniciar Atividade de Avaliação do ônibus
+                        Intent showRatingActivity = new Intent(MapsActivity.this, RatingActivity.class);
+                        // Bundle extras = new Bundle();
+                        //Gson gson = new Gson();
+                       // String teste = gson.toJson(direction.routes);
+                        // extras.putSerializable("routesList", (Serializable)geson );
+                        //showRoutesOptionsToUser.putExtras(extras);
+                        //showRoutesOptionsToUser.putExtra("json", teste);
+                        startActivity(showRatingActivity);
+                    }
+                });
                 /*if (ContextCompat.checkSelfPermission(getApplicationContext(),
                         Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
 
@@ -530,7 +634,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     //Async Tasks Region
-
     public class BusSearchTask extends AsyncTask<String, String, List<Onibus>> {
         private final ProgressDialog dialog = new ProgressDialog(MapsActivity.this);
 
@@ -858,6 +961,124 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
                 dialog.dismiss();
+
+        }
+
+        double distance_between(Location l1, Location l2)
+        {
+            double lat1=l1.getLatitude();
+            double lon1=l1.getLongitude();
+            double lat2=l2.getLatitude();
+            double lon2=l2.getLongitude();
+            double R = 6371; // km
+            double dLat = (lat2-lat1)*Math.PI/180;
+            double dLon = (lon2-lon1)*Math.PI/180;
+            lat1 = lat1*Math.PI/180;
+            lat2 = lat2*Math.PI/180;
+
+            double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            double d = R * c * 1000;
+
+            return d;
+        }
+    }
+
+    public class BusRioInfoSearchTask extends AsyncTask<String, String, List<Bus>> {
+
+        private final ProgressDialog dialog = new ProgressDialog(MapsActivity.this);
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            ProgressDialog dialog;
+            dialog = new ProgressDialog(getApplicationContext());
+            // dialog.setMessage("Recebendo Dados de Ônibus...");
+            //dialog.show();
+            //Log.d("Teste Json", "PRE - 03");
+
+        }
+
+        @Override
+        protected List<Bus> doInBackground(String... params) {
+            JSONArray response = null;
+            ArrayList<Bus> buses = null;
+            try {
+                //HTTP request rioBus
+                HttpURLConnection connection = null;
+                BufferedReader reader = null;
+                URL url = new URL(params[0]);
+                Log.d("INTERNET CONNECTION", "Param: " + params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                Log.d("INTERNET CONNECTION", "Open Con OK");
+                connection.connect();
+                Log.d("INTERNET CONNECTION", "CONNECTED");
+                InputStream stream = null;
+                try {
+                    stream = connection.getInputStream();
+                } catch (FileNotFoundException ex) {
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            Toast.makeText(MapsActivity.this, "Não foi possível conectar", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    return null;
+                }
+
+                reader = new BufferedReader(new InputStreamReader(stream));
+                StringBuffer buffer = new StringBuffer();
+
+                String stringLine = "";
+                while ((stringLine = reader.readLine()) != null) {
+                    buffer.append(stringLine);
+                }
+
+                String finalJsonString = buffer.toString();
+                response = new JSONArray (finalJsonString);
+                buses = new ArrayList<>();
+                for (int i=0; i<response.length(); i++){
+                    JSONObject bus_object = response.getJSONObject(i);
+                    Bus bus = new Bus();
+                    Type BusType = new TypeToken<Bus>(){}.getType();
+                    bus = new Gson().fromJson(bus_object.toString(), BusType);
+                    buses.add(bus);
+                }
+                //TODO
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return buses;
+        }
+
+        @Override
+        protected void onPostExecute(final List<Bus> result) {
+            super.onPostExecute(result);
+            //Imprimir cada Onibus no mapa
+            if (result != null){
+                for (int i=0; i<result.size(); i++){
+                    Log.d("RESULT", result.get(i).line + " " + result.get(i).order+ " "  + result.get(i).latitude + " " + result.get(i).longitude );
+                }
+
+                bus_markers = new ArrayList<>();
+                //mMap.clear();
+                for (int i = 0; i < result.size(); i++) {
+                    LatLng pos = new LatLng(result.get(i).latitude, result.get(i).longitude);
+                   bus_markers.add(mMap.addMarker(new MarkerOptions()
+                            .position(pos)
+                            .title("Linha " + result.get(i).line)
+                            .icon(BitmapDescriptorFactory.fromResource(R.mipmap.bus_marker))
+                            .snippet(result.get(i).order)
+                    ));
+                }
+            }
+
+
+            dialog.dismiss();
 
         }
 
