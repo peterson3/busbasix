@@ -8,23 +8,44 @@
         <!--android:layout_height="match_parent" />-->
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/titulo_rota"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="titulo"
+            android:textSize="20dp" />
 
         <TextView
             android:id="@+id/nome_lista_rota"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="titulo"
-            android:textSize="30dp" />
+            android:text="nome"
+            android:textStyle="bold"
+            android:textSize="18dp" />
 
         <TextView
             android:id="@+id/preco_lista_rota"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="descricao"
+            android:text="preco"
             android:textSize="20dp" />
+        <TextView
+            android:id="@+id/tempo_lista_rota"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="tempo"
+            android:textSize="20dp" />
+
+        <ImageView
+        android:id="@+id/imagem_lista_rota_aval"
+        android:src="@mipmap/ic_star"
+        android:background="@color/transparent"
+        android:layout_width="25dp"
+        android:layout_height="25dp" />
 
     </LinearLayout>
 </LinearLayout>

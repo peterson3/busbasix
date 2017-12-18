@@ -10,6 +10,10 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Region;
 import android.graphics.drawable.Icon;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -17,10 +21,14 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -28,6 +36,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.arlib.floatingsearchview.util.view.MenuView;
+import com.example.tiago.busbasix.API.Rate;
 import com.example.tiago.busbasix.API.RoutesOptionActivity;
 import com.example.tiago.busbasix.API.busBasix.Onibus;
 import com.example.tiago.busbasix.API.busBasix.SoundMeter;
@@ -36,6 +46,7 @@ import com.example.tiago.busbasix.API.googleDirection.Polyline;
 import com.example.tiago.busbasix.API.googleDirection.Route;
 import com.example.tiago.busbasix.API.rioBus.Bus;
 import com.example.tiago.busbasix.API.rioBus.Line;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -65,14 +76,20 @@ import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener, SensorEventListener {
 
     private GoogleMap mMap;
     private Button inputDataBtn;
@@ -98,6 +115,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     EditText from_editText;
     EditText to_editText;
     Button rate_btn;
+    Sensor temperatureSensor;
+    SensorManager sensor;
+
+
+    private com.google.android.gms.maps.model.Polyline drawedPolyline = null;
 
     private List<Marker> bus_markers;
     private Bus bus_i_am_in;
@@ -119,6 +141,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         EditText from_editText = (EditText) findViewById(R.id.from_location);
         EditText to_editText = (EditText) findViewById(R.id.to_location);
 
+
+        BottomNavigationView bottomNavigationView = (BottomNavigationView)findViewById(R.id.navigation);
+
+        bottomNavigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.home:
+                        //Add your action onClick
+                        break;
+                    case R.id.menu_mapa:
+
+                        break;
+
+                    case R.id.menu_linhas:
+                        Intent busInfoActivity = new Intent(MapsActivity.this, BusInfoActivity.class);
+                        startActivity(busInfoActivity);
+                        break;
+                }
+                return false;
+            }
+        });
+
         current_status.setText("DESCONHECIDO");
         if (ContextCompat.checkSelfPermission(getApplicationContext(),
                         Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -131,6 +176,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d("AUDIO PERMISSION", "GRANTED");
             }
                 }
+
+        sensor = (SensorManager)getSystemService(SENSOR_SERVICE);
+        temperatureSensor = sensor.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
+
+        if (temperatureSensor != null) {
+    /* register listener and do other magic... */
+            Log.d("TEMPERATURA","Sensor de Temperatura Ligado");
+            sensor.registerListener(this, temperatureSensor, 1000000);
+
+        }
+        else{
+            Log.d("TEMPERATURA","Sensor de Temperatura Nulo");
+        }
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -163,11 +221,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         lng = location.getLongitude();
                     }
 
+                    //mMap.animateCamera(mMap.animateCamera(new ););
+
+
                     LatLng curPoint = new LatLng(lat, lng);
                     double new_lat = location.getLatitude();
                     double new_long = location.getLongitude();
                     //Location.distanceBetween();
                     LatLng latLng = new LatLng(new_lat, new_long);
+
+                    mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+
+                    if (bus_i_am_in != null){
+                        Log.d ("GPS Listener LATLNG",location.getLatitude() + ", " + location.getLongitude());
+                        //TODO sendo to API
+                    }
+                    //mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
                     //mMap.addPolyline(new PolylineOptions().add(curPoint, latLng).width(10).color(Color.BLUE));
                     // Instantiates a new CircleOptions object and defines the center and radius
                     //CircleOptions circleOptions = new CircleOptions()
@@ -176,35 +245,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     // Get back the mutable Circle
 //                    Circle me = mMap.addCircle(circleOptions);
-                    mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-                    mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
+                    //mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                    //mMap.animateCamera(CameraUpdateFactory.zoomTo(18.0f));
 
 
                     //For Testing
-                    try {
-                        Log.d("URL", "url/buses/myLat="+String.valueOf(new_lat)
-                                +"&myLong="+String.valueOf(new_long)
-                                +"&maxDistance="+String.valueOf(300));
-                        new BusSearchTask().execute("https://iksfznseee.localtunnel.me/buses/myLat="+String.valueOf(new_lat)
-                                +"&myLong="+String.valueOf(new_long)
-                                +"&maxDistance="+String.valueOf(300)).get();
-
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    }
+//                    try {
+//                        Log.d("URL", "url/buses/myLat="+String.valueOf(new_lat)
+//                                +"&myLong="+String.valueOf(new_long)
+//                                +"&maxDistance="+String.valueOf(300));
+//                        new BusSearchTask().execute("https://iksfznseee.localtunnel.me/buses/myLat="+String.valueOf(new_lat)
+//                                +"&myLong="+String.valueOf(new_long)
+//                                +"&maxDistance="+String.valueOf(300)).get();
+//
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    } catch (ExecutionException e) {
+//                        e.printStackTrace();
+//                    }
 
                     //TODO:
-                    //Se o usuário está abordo de algum ônibus - Então alimenta informação em tempo real do ônibus com informação do usuário
-                    if (onibusAbordo != null){
-                        onibusAbordo.setLatLong(latLng);
-                        if (location.hasSpeed()){
-                            onibusAbordo.setVelocidade(location.getSpeed());
-                        }
-
-                        // O Marcador desse ônibus também deve mudar
-                    }
+//                    //Se o usuário está abordo de algum ônibus - Então alimenta informação em tempo real do ônibus com informação do usuário
+//                    if (onibusAbordo != null){
+//                        onibusAbordo.setLatLong(latLng);
+//                        if (location.hasSpeed()){
+//                            onibusAbordo.setVelocidade(location.getSpeed());
+//                        }
+//
+//                        // O Marcador desse ônibus também deve mudar
+//                    }
                     //TODO:
                     //Mover o Marcador do Usuário
                     //Se passou de um minuto desde a última atualização, Então requisitar novamente os ônibus próximos.
@@ -359,6 +428,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     String requestString=  "http://rest.riob.us/v3/search/";
                     ArrayList<String> nomeOnibus = direction.routes.get(retorno_opcao_rota).getNomeOnibus();
+
+                    //tratando nome dos ônibus (retirando caracteres alfa)
                     for (int i=0; i<nomeOnibus.size(); i++){
                         String nomeOnibus_tratado  = nomeOnibus.get(i);
                         nomeOnibus_tratado = nomeOnibus_tratado.replaceAll("\\D+","");
@@ -368,6 +439,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             requestString += ",";
                         }
                     }
+
+                    //Desenhando Polyline da Rota Escolhida
+                    DrawRoutePolyline(direction.routes.get(retorno_opcao_rota));
 
                     try {
                         buses_in_screen = new BusRioInfoSearchTask().execute(requestString).get();
@@ -490,7 +564,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.setOnMarkerClickListener(this);
         boolean GPS_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-
+        mMap.setMyLocationEnabled(true);
         Location location;
         LatLng initialPos;
         if(GPS_enabled){
@@ -540,56 +614,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
                 //builder.setMessage("Você está abordo deste ônibus?");
                 //dialog
-                Toast.makeText(MapsActivity.this, "Ótimo! Colabore avaliando seu ônibus!", Toast.LENGTH_LONG).show();
-                //TODO:
-                //Teste de Ruído:
-                //Pedir Permissão para utilizar o MICROFONE
-                //Verificar Volume do Som Ambiente
-                //Com base no "Emperismo", ou "Heurísticas" definir um valor aceitável
+                Toast.makeText(MapsActivity.this, "Colabore avaliando seu ônibus!", Toast.LENGTH_LONG).show();
                 current_status.setText("ABORDO DO ÔNIBUS");
-
                 int index = bus_markers.indexOf(marker);
                 bus_i_am_in = buses_in_screen.get(index);
                 TextView current_status = (TextView) findViewById(R.id.current_status);
                 current_status.setText(bus_i_am_in.line + "-" + bus_i_am_in.order);
-                View btn = (Button)findViewById(R.id.rate_button);
+                View btn = (FloatingActionButton)findViewById(R.id.rate_fl_btn);
                 btn.setVisibility(View.VISIBLE);
                 btn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         //Iniciar Atividade de Avaliação do ônibus
                         Intent showRatingActivity = new Intent(MapsActivity.this, RatingActivity.class);
-                        // Bundle extras = new Bundle();
-                        //Gson gson = new Gson();
-                       // String teste = gson.toJson(direction.routes);
-                        // extras.putSerializable("routesList", (Serializable)geson );
-                        //showRoutesOptionsToUser.putExtras(extras);
-                        //showRoutesOptionsToUser.putExtra("json", teste);
+                        showRatingActivity.putExtra("lineNumber", bus_i_am_in.line);
+                        showRatingActivity.putExtra("lineOrder", bus_i_am_in.order);
                         startActivity(showRatingActivity);
                     }
                 });
-                /*if (ContextCompat.checkSelfPermission(getApplicationContext(),
-                        Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
 
-                    ActivityCompat.requestPermissions(getParent(),
-                            new String[]{Manifest.permission.RECORD_AUDIO},
-                            1);
-
-                    MediaRecorder mediaRecorder = null;
-
-                }
-                */
-                //TODO:
-                //Setar Onibus Abotdo
-                //onibusAbordor = onibus?;
-                //Escutar Microfone
+                View exit_btn = (FloatingActionButton)findViewById(R.id.exit_fl_btn);
+                exit_btn.setVisibility(View.VISIBLE);
+                exit_btn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        //Sair do Onibus
+                        bus_i_am_in = null;
+                        //TODO
+                        //Para de escutar os sensores
+                        //TODO:
+                        //Processo inverso do momento de ingresso ao onibus
+                        //Tornar os botões Invisíveis
+                    }
+                });
                 new ListenMicSensorTask().execute();
                 //mSensor.stop();
-
-                //Passar informações de GPS do Usuário para o ônibus
-                //Mostrar no Painel do Usuário - Linhas e Onibus
-                //Começar a avaliar via sensores
-                //Pedir feedback diretamente
                 dialog.dismiss();
             }
         });
@@ -598,10 +657,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void onClick(DialogInterface dialog, int which) {
-
                 // Do nothing
-
-
                 dialog.dismiss();
             }
         });
@@ -610,6 +666,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         alert.show();
         return false;
     }
+
 
     private void showGPSDisabledAlertToUser(){
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
@@ -633,7 +690,79 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         alert.show();
     }
 
+    private List<LatLng> decodePoly(String encoded) {
+
+        List<LatLng> poly = new ArrayList<LatLng>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+
+        return poly;
+    }
+
+    public void DrawRoutePolyline(Route route) {
+        if (drawedPolyline !=null){
+            drawedPolyline.remove();
+        }
+        List<LatLng> list = decodePoly(route.overview_polyline.points);
+
+        PolylineOptions options = new PolylineOptions().width(15).color(Color.BLUE).geodesic(true);
+        for (int z = 0; z < list.size(); z++) {
+            LatLng point = list.get(z);
+            options.add(point);
+        }
+        drawedPolyline = mMap.addPolyline(options);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        super.onResume();
+
+        if (event.sensor.getType() != Sensor.TYPE_AMBIENT_TEMPERATURE) return;
+
+        float temperature;
+        if (event.values.length > 0) {
+            temperature = event.values[0];
+            Log.d("TEMPERATURA", String.valueOf(temperature));
+        }
+        else{
+            Log.d("TEMPERATURA", "FAIL");
+
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+
     //Async Tasks Region
+
     public class BusSearchTask extends AsyncTask<String, String, List<Onibus>> {
         private final ProgressDialog dialog = new ProgressDialog(MapsActivity.this);
 
@@ -808,6 +937,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             done = true;
         }
 
+
         @Override
         protected Void doInBackground(String... params) {
             Log.d("Listen on MIC", "Starting MIC.." );
@@ -845,6 +975,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }, 1000);*/
 
                 amplitudeNoise =  mSensor.getAmplitude();
+                if (amplitudeNoise > 3000){
+                    runOnUiThread(new Runnable(){
+
+                        @Override
+                        public void run(){
+                            //update ui here
+                            // display toast here
+                            //Toast.makeText(MapsActivity.this, "Nível de Ruído Muito Alto, Reportando", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
                 Log.d("NOISE AMPLITUDE", String.valueOf(amplitudeNoise));
                 try {
                     Thread.sleep(2000);
@@ -893,7 +1034,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                         @Override
                         public void run() {
-                            Toast.makeText(MapsActivity.this, "Não foi possível conectar", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MapsActivity.this, "Erro ao recuperar rotas", Toast.LENGTH_SHORT).show();
                         }
                     });
                     return null;
@@ -944,44 +1085,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                  Log.d("DIRECTION " + String.valueOf(i) +" LINE",
                                          result.routes.get(i).legs.get(j).steps.get(k).transit_details.line.short_name + "-" + result.routes.get(i).legs.get(j).steps.get(k).transit_details.line.name);
                             }
+                            else{
+                                Log.d("DIRECTION " + String.valueOf(i) +" LINE", "Andar " + result.routes.get(i).legs.get(j).steps.get(k).duration.text);
+                            }
 
                         }
                     }
                 }
 
-                List<LatLng> list = decodePoly(result.routes.get(0).overview_polyline.points);
-
-                PolylineOptions options = new PolylineOptions().width(15).color(Color.BLUE).geodesic(true);
-                for (int z = 0; z < list.size(); z++) {
-                    LatLng point = list.get(z);
-                    options.add(point);
-                }
-                com.google.android.gms.maps.model.Polyline line = mMap.addPolyline(options);
-
-
-
+                DrawRoutePolyline(result.routes.get(0));
                 dialog.dismiss();
 
-        }
-
-        double distance_between(Location l1, Location l2)
-        {
-            double lat1=l1.getLatitude();
-            double lon1=l1.getLongitude();
-            double lat2=l2.getLatitude();
-            double lon2=l2.getLongitude();
-            double R = 6371; // km
-            double dLat = (lat2-lat1)*Math.PI/180;
-            double dLon = (lon2-lon1)*Math.PI/180;
-            lat1 = lat1*Math.PI/180;
-            lat2 = lat2*Math.PI/180;
-
-            double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                    Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
-            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            double d = R * c * 1000;
-
-            return d;
         }
     }
 
@@ -1022,7 +1136,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                         @Override
                         public void run() {
-                            Toast.makeText(MapsActivity.this, "Não foi possível conectar", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MapsActivity.this, "Erro ao recuperar informações de ônibus", Toast.LENGTH_SHORT).show();
                         }
                     });
                     return null;
@@ -1063,17 +1177,62 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 for (int i=0; i<result.size(); i++){
                     Log.d("RESULT", result.get(i).line + " " + result.get(i).order+ " "  + result.get(i).latitude + " " + result.get(i).longitude );
                 }
+                if (bus_markers != null){
+                    for (int i=0; i<bus_markers.size(); i++){
+                        bus_markers.get(i).remove();
+                    }
+                    bus_markers.clear();
+                }
 
                 bus_markers = new ArrayList<>();
                 //mMap.clear();
+
+                //instantiates a calendar using the current time in the specified timezone
+                //change the timezone
+                TimeZone tz = TimeZone.getTimeZone("America/Sao_Paulo");
+                TimeZone.setDefault(tz);
+                Calendar cSchedStartCal = GregorianCalendar.getInstance(tz);
+                SimpleDateFormat format1 = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+                Log.d("HOUR", format1.format(cSchedStartCal.getTime()));
+
+                long compare1 = cSchedStartCal.getTime().getTime();
+
                 for (int i = 0; i < result.size(); i++) {
                     LatLng pos = new LatLng(result.get(i).latitude, result.get(i).longitude);
-                   bus_markers.add(mMap.addMarker(new MarkerOptions()
+
+                    long compare2 = result.get(i).timeStamp.getTime();
+
+                    long duration  = compare2 - compare1;
+
+                  //  long diffInSeconds = TimeUnit.MILLISECONDS.toSeconds(duration);
+                    long diffInMinutes = TimeUnit.MILLISECONDS.toMinutes(duration);
+                  //  long diffInHours = TimeUnit.MILLISECONDS.toHours(duration);
+
+  //                  Log.d("TIME DIFFERENCE seg", String.valueOf(diffInSeconds));
+    //                Log.d("TIME DIFFERENCE hour", String.valueOf(diffInHours));
+
+                    diffInMinutes = Math.abs(diffInMinutes);
+
+                    Log.d("TIME DIFFERENCE min", String.valueOf(diffInMinutes));
+
+                    Marker busMarker = mMap.addMarker(new MarkerOptions()
                             .position(pos)
                             .title("Linha " + result.get(i).line)
-                            .icon(BitmapDescriptorFactory.fromResource(R.mipmap.bus_marker))
                             .snippet(result.get(i).order)
-                    ));
+                    );
+
+
+
+                    if (diffInMinutes < 5){
+                        busMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.bus_green));
+                    }
+                    if (diffInMinutes >= 5 && diffInMinutes < 10){
+                        busMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.bus_yellow));
+                    }
+                    if (diffInMinutes >= 10){
+                        busMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.bus_red));
+                    }
+                    bus_markers.add(busMarker);
                 }
             }
 
@@ -1103,40 +1262,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+
+
     //Async Tasks Region End
 
-    private List<LatLng> decodePoly(String encoded) {
 
-        List<LatLng> poly = new ArrayList<LatLng>();
-        int index = 0, len = encoded.length();
-        int lat = 0, lng = 0;
-
-        while (index < len) {
-            int b, shift = 0, result = 0;
-            do {
-                b = encoded.charAt(index++) - 63;
-                result |= (b & 0x1f) << shift;
-                shift += 5;
-            } while (b >= 0x20);
-            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-            lat += dlat;
-
-            shift = 0;
-            result = 0;
-            do {
-                b = encoded.charAt(index++) - 63;
-                result |= (b & 0x1f) << shift;
-                shift += 5;
-            } while (b >= 0x20);
-            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-            lng += dlng;
-
-            LatLng p = new LatLng((((double) lat / 1E5)),
-                    (((double) lng / 1E5)));
-            poly.add(p);
-        }
-
-        return poly;
-    }
 }
 

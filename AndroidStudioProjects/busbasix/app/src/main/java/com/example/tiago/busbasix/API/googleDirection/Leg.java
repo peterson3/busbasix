@@ -29,6 +29,9 @@ public class Leg {
 
     public Leg(JSONObject jsonObject) throws JSONException {
 
+        JSONObject duration_object =  jsonObject.getJSONObject("duration");
+        this.duration = new Duration(duration_object);
+
         this.steps = new ArrayList<Step>();
         JSONArray steps_response = jsonObject.getJSONArray("steps");
         for (int i=0; i<steps_response.length(); i++){

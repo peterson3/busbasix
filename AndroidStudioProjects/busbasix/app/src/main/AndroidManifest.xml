@@ -45,7 +45,7 @@
             android:value="@string/facebook_app_id" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key" />
+            android:value="AIzaSyB7-JsOYd95c79-YDQmLwZN7DohOV0hSqI" />
 
         <activity
             android:name="com.facebook.FacebookActivity"
@@ -75,13 +75,15 @@
             android:label="@string/title_activity_rating"
             android:theme="@style/AppTheme" />
         <activity android:name=".API.RoutesOptionActivity" />
+        <!--<activity-->
+            <!--android:name=".RatingActivity"-->
+            <!--android:label="@string/title_activity_rating"-->
+            <!--android:theme="@style/AppTheme" />-->
+        <activity android:name=".BusInfoActivity" />
         <activity
-            android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings" />
-        <activity
-            android:name=".API.RatingActivity"
-            android:label="@string/title_activity_rating"
-            android:theme="@style/AppTheme" />
+            android:name=".ConfigActivity"
+            android:label="@string/title_activity_config"
+            android:theme="@style/AppTheme"></activity>
     </application>
 
 </manifest>

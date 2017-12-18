@@ -18,5 +18,7 @@ public class Fare {
         this.text = jsonObject.getString("text");
         this.value = jsonObject.getDouble("value");
 
+
+
     }
 }

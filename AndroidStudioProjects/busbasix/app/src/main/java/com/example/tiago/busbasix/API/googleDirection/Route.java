@@ -25,6 +25,7 @@ public class Route {
     public List<Object> waypoint_order;
     public Fare fare;
 
+
     public Route(JSONObject jsonObject) throws JSONException {
 
         this.summary = jsonObject.getString("summary");
@@ -65,5 +66,26 @@ public class Route {
         return result;
     }
 
+    public Duration getRouteDuration (){
+        Duration routeDuration = new Duration();
+        int valueDuration = 0;
+        for (int i=0; i<this.legs.size(); i++){
+            valueDuration += this.legs.get(i).duration.value;
+        }
+        routeDuration.value = valueDuration; //Esse valor em vem Segundos
 
+        //Quantidade de Minutos
+        int segundos = routeDuration.value % 60;
+        int minutos = routeDuration.value / 60;
+        int horas = minutos / 60;
+        minutos = minutos % 60;
+
+        routeDuration.text = String.valueOf(horas)+":";
+        routeDuration.text += String.valueOf(minutos)+":";
+        routeDuration.text += String.valueOf(segundos);
+
+        return routeDuration;
+    }
 }
+
+

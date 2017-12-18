@@ -29,6 +29,12 @@ public class Step {
 
     public Step(JSONObject jsonObject) throws JSONException {
 
+        JSONObject duration_object =  jsonObject.getJSONObject("duration");
+        this.duration = new Duration(duration_object);
+
+        JSONObject polyline_object =  jsonObject.getJSONObject("polyline");
+        this.polyline = new Polyline(polyline_object);
+
         try{
             JSONObject transit_details_object =  jsonObject.getJSONObject("transit_details");
             this.transit_details = new TransitDetails(transit_details_object);
@@ -37,6 +43,7 @@ public class Step {
             this.transit_details = null;
         }
 
+        this.html_instructions = jsonObject.getString("html_instructions");
 
     }
 }
